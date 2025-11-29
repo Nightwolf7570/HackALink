@@ -36,23 +36,24 @@ export default function Button({
   
   const variantClasses = {
     primary: `
-      bg-slate-900 text-white rounded-xl
-      hover:bg-slate-800 active:bg-slate-950
-      focus-visible:ring-slate-200
+      bg-blue-500 text-white rounded-lg
+      hover:bg-blue-600 active:bg-blue-700
+      focus-visible:ring-blue-100
+      shadow-sm hover:shadow
     `,
     secondary: `
-      bg-white text-slate-700 rounded-xl border border-slate-200
-      hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100
-      focus-visible:ring-slate-100
+      bg-white text-gray-700 rounded-lg border border-gray-200
+      hover:bg-gray-50 hover:border-gray-300 active:bg-gray-100
+      focus-visible:ring-gray-100
     `,
     ghost: `
-      text-slate-600 rounded-xl
-      hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200
-      focus-visible:ring-slate-100
+      text-gray-600 rounded-lg
+      hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200
+      focus-visible:ring-gray-100
     `,
     danger: `
-      bg-red-600 text-white rounded-xl
-      hover:bg-red-700 active:bg-red-800
+      bg-red-500 text-white rounded-lg
+      hover:bg-red-600 active:bg-red-700
       focus-visible:ring-red-100
     `,
   };

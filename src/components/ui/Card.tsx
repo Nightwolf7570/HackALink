@@ -22,24 +22,24 @@ export default function Card({
   variant = 'default'
 }: Props) {
   const variantClasses = {
-    default: 'card',
-    elevated: 'card-elevated',
-    interactive: 'card-interactive',
+    default: 'bg-white rounded-xl border border-gray-200 shadow-sm',
+    elevated: 'bg-white rounded-xl border border-gray-100 shadow-md',
+    interactive: 'bg-white rounded-xl border border-gray-200 shadow-sm transition-all duration-200 hover:shadow-md hover:border-gray-300 hover:-translate-y-0.5',
   };
 
   return (
     <div className={`${variantClasses[variant]} ${className}`}>
       {(title || subtitle || action) && (
-        <div className="px-6 pt-6 pb-4">
+        <div className="px-6 pt-5 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               {title && (
-                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                <h2 className="text-base font-semibold text-gray-900">
                   {title}
                 </h2>
               )}
               {subtitle && (
-                <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                <p className="text-sm text-gray-500 mt-1">
                   {subtitle}
                 </p>
               )}

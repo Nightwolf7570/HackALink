@@ -14,7 +14,7 @@ export default function TeamSuggestions({ suggestions }: Props) {
       title="Suggested Teams" 
       subtitle="AI-generated team compositions with complementary skills"
       action={
-        <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-md">
           {suggestions.length} teams
         </span>
       }
@@ -23,12 +23,12 @@ export default function TeamSuggestions({ suggestions }: Props) {
         {suggestions.map((team, idx) => (
           <div 
             key={idx} 
-            className="animate-fade-in p-5 bg-slate-50 rounded-xl border border-slate-100"
+            className="animate-fade-in p-5 bg-gray-50 rounded-lg border border-gray-100"
             style={{ animationDelay: `${idx * 0.05}s` }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-medium text-slate-900">Team {idx + 1}</h3>
-              <span className="px-2.5 py-1 bg-white text-slate-600 rounded-lg text-xs font-medium border border-slate-200">
+              <h3 className="font-medium text-gray-900">Team {idx + 1}</h3>
+              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">
                 {team.participants.length} members
               </span>
             </div>
@@ -36,15 +36,15 @@ export default function TeamSuggestions({ suggestions }: Props) {
             {/* Team Members */}
             <div className="flex flex-wrap gap-2 mb-4">
               {team.participants.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 bg-white rounded-full pl-1 pr-3 py-1 border border-slate-200">
+                <div key={p.id} className="flex items-center gap-2 bg-white rounded-full pl-1 pr-3 py-1 border border-gray-200">
                   <Avatar src={p.linkedinData?.profileImage} name={p.name} size="sm" />
-                  <span className="text-sm font-medium text-slate-700">{p.name}</span>
+                  <span className="text-sm font-medium text-gray-700">{p.name}</span>
                 </div>
               ))}
             </div>
             
             {/* Reasoning */}
-            <p className="text-slate-500 text-sm mb-4 italic leading-relaxed">
+            <p className="text-gray-500 text-sm mb-4 italic leading-relaxed">
               "{team.reasoning}"
             </p>
             
@@ -54,7 +54,7 @@ export default function TeamSuggestions({ suggestions }: Props) {
                 {team.complementarySkills.slice(0, 6).map((skill, i) => (
                   <span 
                     key={i}
-                    className="px-2.5 py-1 bg-white text-slate-600 rounded-lg text-xs font-medium border border-slate-200"
+                    className="px-2.5 py-1 bg-white text-gray-600 rounded-md text-xs font-medium border border-gray-200"
                   >
                     {skill}
                   </span>

@@ -26,12 +26,12 @@ export default function Avatar({ src, name, size = 'md', className = '' }: Props
   // Generate consistent soft color based on name
   const getColorClasses = (name: string) => {
     const colors = [
-      'bg-slate-100 text-slate-600',
-      'bg-sky-50 text-sky-600',
-      'bg-violet-50 text-violet-600',
-      'bg-amber-50 text-amber-600',
-      'bg-emerald-50 text-emerald-600',
-      'bg-rose-50 text-rose-600',
+      'bg-blue-100 text-blue-600',
+      'bg-sky-100 text-sky-600',
+      'bg-violet-100 text-violet-600',
+      'bg-amber-100 text-amber-600',
+      'bg-emerald-100 text-emerald-600',
+      'bg-rose-100 text-rose-600',
     ];
     const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
     return colors[index];
@@ -49,7 +49,7 @@ export default function Avatar({ src, name, size = 'md', className = '' }: Props
         ring-2 ring-white
         overflow-hidden
         flex-shrink-0
-        ${!showImage ? getColorClasses(name) : ''}
+        ${!showImage ? getColorClasses(name) : 'bg-gray-100'}
         ${className}
       `.trim().replace(/\s+/g, ' ')}
     >

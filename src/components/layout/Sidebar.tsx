@@ -61,14 +61,14 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-slate-900 min-h-screen flex flex-col fixed left-0 top-0 bottom-0 z-40">
+    <aside className="w-64 bg-gray-900 min-h-screen flex flex-col fixed left-0 top-0 bottom-0 z-40">
       {/* Logo */}
-      <div className="p-5 border-b border-slate-800">
+      <div className="p-5 border-b border-gray-800">
         <Link href="/" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center">
-            <span className="text-slate-900 text-sm font-bold">H</span>
+          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center">
+            <span className="text-white text-sm font-bold">H</span>
           </div>
-          <span className="text-lg font-semibold text-white tracking-tight">HackaLink</span>
+          <span className="text-lg font-semibold text-white">HackaLink</span>
         </Link>
       </div>
       
@@ -83,11 +83,11 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium 
+                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium 
                 transition-all duration-150 ease-out
                 ${isActive
-                  ? 'bg-white text-slate-900'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
                 }
               `}
             >
@@ -99,14 +99,14 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-800/50">
-          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white text-sm font-medium">
+      <div className="p-3 border-t border-gray-800">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-800/50">
+          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-medium">
             U
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">User</p>
-            <p className="text-xs text-slate-500">Free Plan</p>
+            <p className="text-xs text-gray-500">Free Plan</p>
           </div>
         </div>
       </div>

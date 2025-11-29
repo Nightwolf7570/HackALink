@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import PageHeader from '@/components/layout/PageHeader';
 import ParticipantDetailDrawer from '@/components/ui/ParticipantDetailDrawer';
@@ -42,7 +41,7 @@ export default function ParticipantsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-8">
       <PageHeader 
         title="Your Network"
         subtitle="View and manage all participants from your hackathons"
@@ -61,7 +60,7 @@ export default function ParticipantsPage() {
       <div className="mb-6">
         <div className="relative max-w-md">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
@@ -77,40 +76,40 @@ export default function ParticipantsPage() {
 
       {/* Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="card p-5">
-          <p className="text-sm text-slate-500 mb-1">Total Participants</p>
-          <p className="text-2xl font-semibold text-slate-900">{participants.length}</p>
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-500 mb-1">Total Participants</p>
+          <p className="text-2xl font-semibold text-gray-900">{participants.length}</p>
         </div>
-        <div className="card p-5">
-          <p className="text-sm text-slate-500 mb-1">With LinkedIn</p>
-          <p className="text-2xl font-semibold text-slate-900">
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-500 mb-1">With LinkedIn</p>
+          <p className="text-2xl font-semibold text-gray-900">
             {participants.filter(p => p.linkedinData).length}
           </p>
         </div>
-        <div className="card p-5">
-          <p className="text-sm text-slate-500 mb-1">Top Candidates</p>
-          <p className="text-2xl font-semibold text-slate-900">
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-500 mb-1">Top Candidates</p>
+          <p className="text-2xl font-semibold text-gray-900">
             {participants.filter(p => p.score && p.score > 0.8).length}
           </p>
         </div>
-        <div className="card p-5">
-          <p className="text-sm text-slate-500 mb-1">Pending Review</p>
-          <p className="text-2xl font-semibold text-slate-900">
+        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-500 mb-1">Pending Review</p>
+          <p className="text-2xl font-semibold text-gray-900">
             {participants.filter(p => !p.linkedinData).length}
           </p>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 mb-6 p-1 bg-slate-100 rounded-xl w-fit">
+      <div className="flex gap-1 mb-6 p-1 bg-gray-100 rounded-lg w-fit">
         {filters.map((filter) => (
           <button
             key={filter.id}
             onClick={() => setActiveFilter(filter.id)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all duration-150 ${
               activeFilter === filter.id
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             {filter.label}
@@ -120,15 +119,15 @@ export default function ParticipantsPage() {
 
       {/* Participant Grid */}
       {filteredParticipants.length === 0 ? (
-        <div className="card">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="text-center py-16 px-6">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-100 flex items-center justify-center">
-              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No Participants Yet</h3>
-            <p className="text-slate-500 mb-6 max-w-sm mx-auto text-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Participants Yet</h3>
+            <p className="text-gray-500 mb-6 max-w-sm mx-auto text-sm">
               {searchTerm
                 ? 'No participants found matching your search'
                 : 'Start by analyzing participants from the dashboard or importing a CSV file'}
@@ -144,8 +143,8 @@ export default function ParticipantsPage() {
             <div
               key={participant.id}
               onClick={() => handleCardClick(participant)}
-              className={`card-interactive p-4 cursor-pointer ${
-                selectedParticipant?.id === participant.id ? 'ring-2 ring-slate-900' : ''
+              className={`bg-white p-4 rounded-xl border border-gray-200 shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md hover:border-gray-300 ${
+                selectedParticipant?.id === participant.id ? 'ring-2 ring-blue-500' : ''
               }`}
             >
               <div className="flex items-start gap-3">
@@ -155,11 +154,11 @@ export default function ParticipantsPage() {
                   size="md"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-slate-900 truncate">
+                  <h3 className="font-medium text-gray-900 truncate">
                     {participant.name}
                   </h3>
                   {participant.linkedinData?.headline && (
-                    <p className="text-sm text-slate-500 truncate mt-0.5">
+                    <p className="text-sm text-gray-500 truncate mt-0.5">
                       {participant.linkedinData.headline}
                     </p>
                   )}
@@ -168,7 +167,7 @@ export default function ParticipantsPage() {
                       href={participant.linkedinData.profileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-[#0077b5] mt-2 transition-colors"
+                      className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#0077b5] mt-2 transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
