@@ -118,23 +118,25 @@ export class ParticipantService {
       ? participantsWithData 
       : participants; // Fallback to all participants even without LinkedIn data
 
+    // Get only top 5 heavy hitters
+    const TOP_N = 5;
     let heavyHitters: Participant[] = [];
     try {
-      heavyHitters = await this.llmAnalyzer.identifyHeavyHitters(participantsToAnalyze);
-      console.log(`[ParticipantService] LLM returned ${heavyHitters.length} heavy hitters`);
+      heavyHitters = await this.llmAnalyzer.identifyHeavyHitters(participantsToAnalyze, TOP_N);
+      console.log(`[ParticipantService] LLM returned ${heavyHitters.length} top candidates`);
     } catch (error) {
       console.error('[ParticipantService] Error identifying heavy hitters:', error);
-      // Fallback: return all participants with a default score
-      heavyHitters = participantsToAnalyze.map((p, idx) => ({
+      // Fallback: return top 5 participants with default scores
+      heavyHitters = participantsToAnalyze.slice(0, TOP_N).map((p, idx) => ({
         ...p,
-        score: 1 - (idx * 0.05), // Decreasing score based on order
+        score: 1 - (idx * 0.05),
       }));
     }
     
     // If LLM returned empty, use fallback
     if (heavyHitters.length === 0) {
       console.log('[ParticipantService] LLM returned empty, using fallback');
-      heavyHitters = participantsToAnalyze.slice(0, 15).map((p, idx) => ({
+      heavyHitters = participantsToAnalyze.slice(0, TOP_N).map((p, idx) => ({
         ...p,
         score: 1 - (idx * 0.05),
       }));
@@ -143,11 +145,11 @@ export class ParticipantService {
     onProgress?.({
       stage: 'Generating talking points',
       progress: 0.8,
-      message: 'Creating personalized conversation starters...',
+      message: `Creating conversation starters for top ${heavyHitters.length} candidates...`,
     });
 
-    // Only generate talking points for participants with LinkedIn data
-    const talkingPoints = await this.generateAllTalkingPoints(participantsWithData);
+    // Generate talking points ONLY for the top 5 heavy hitters
+    const talkingPoints = await this.generateAllTalkingPoints(heavyHitters);
 
     onProgress?.({
       stage: 'Finding connections',
@@ -187,45 +189,58 @@ export class ParticipantService {
   ): Promise<TalkingPoint[]> {
     const talkingPoints: TalkingPoint[] = [];
     
-    // Limit to top 10 participants to avoid too many API calls
-    const limitedParticipants = participants.slice(0, 10);
-    console.log(`Generating talking points for ${limitedParticipants.length} participants (limited from ${participants.length})`);
+    // Only generate for the participants passed in (should be top 5)
+    console.log(`[ParticipantService] Generating talking points for ${participants.length} top candidates`);
 
-    // Process in parallel with timeout
-    const timeout = (ms: number) => new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), ms)
-    );
-
-    const promises = limitedParticipants.map(async participant => {
-      if (!participant.linkedinData) return null;
+    // Process sequentially to avoid rate limits
+    for (const participant of participants) {
       try {
-        // 30 second timeout per participant
-        const points = await Promise.race([
-          this.llmAnalyzer.generateTalkingPoints(participant),
-          timeout(30000)
-        ]) as string[];
+        const points = await this.llmAnalyzer.generateTalkingPoints(participant);
         
-        return {
+        talkingPoints.push({
           participantId: participant.id,
           participantName: participant.name,
-          points,
+          points: points.length > 0 ? points : this.getDefaultTalkingPoints(participant),
           source: 'linkedin' as const,
-        };
+        });
       } catch (error) {
-        console.warn(`Timeout or error generating talking points for ${participant.name}:`, error);
-        return {
+        console.warn(`[ParticipantService] Error generating talking points for ${participant.name}:`, error);
+        talkingPoints.push({
           participantId: participant.id,
           participantName: participant.name,
-          points: ['Could not generate talking points - try again later.'],
+          points: this.getDefaultTalkingPoints(participant),
           source: 'linkedin' as const,
-        };
+        });
       }
-    });
-
-    const results = await Promise.all(promises);
-    talkingPoints.push(...(results.filter(Boolean) as TalkingPoint[]));
+    }
 
     return talkingPoints;
+  }
+
+  private getDefaultTalkingPoints(participant: Participant): string[] {
+    const firstName = participant.name.split(' ')[0];
+    const company = participant.linkedinData?.company;
+    const position = participant.linkedinData?.currentPosition;
+    
+    if (company && position) {
+      return [
+        `Hey ${firstName}! I saw you're a ${position} at ${company} - what's it like working there?`,
+        `What kind of projects are you hoping to build this weekend?`,
+        `What's your go-to tech stack?`,
+      ];
+    } else if (company) {
+      return [
+        `Hey ${firstName}! I noticed you're at ${company} - what brings you to this hackathon?`,
+        `What problems are you most excited to solve this weekend?`,
+        `Have you been to hackathons before?`,
+      ];
+    } else {
+      return [
+        `Hey ${firstName}! What brings you to this hackathon?`,
+        `What kind of projects are you hoping to work on?`,
+        `What's your background - are you more into frontend, backend, or something else?`,
+      ];
+    }
   }
 
   private extractBackground(linkedinData?: any) {

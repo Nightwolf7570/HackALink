@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { Participant, TalkingPoint, SimilarityMatch, TeamSuggestion } from '@/types';
+import type { Participant, SimilarityMatch, TeamSuggestion } from '@/types';
 
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -8,118 +8,137 @@ function getOpenAIClient() {
   }
   return new OpenAI({
     apiKey,
+    timeout: 30000, // 30 second timeout for all requests
   });
 }
 
 export class LLMAnalyzer {
-  async identifyHeavyHitters(participants: Participant[]): Promise<Participant[]> {
+  async identifyHeavyHitters(participants: Participant[], topN: number = 5): Promise<Participant[]> {
     if (participants.length === 0) {
       console.log('[LLM] No participants to analyze');
       return [];
     }
 
-    const prompt = `Analyze these hackathon participants and rank them by job prestige, industry influence, and career achievements.
+    const participantList = participants.map((p, idx) => 
+      `${idx + 1}. ${p.name} - ${p.linkedinData?.currentPosition || 'Unknown role'} at ${p.linkedinData?.company || 'Unknown company'}`
+    ).join('\n');
+
+    const prompt = `From these hackathon participants, identify the TOP ${topN} most influential people to network with.
 
 Participants:
-${participants.map((p, idx) => `
-${idx + 1}. ${p.name}
-   - Position: ${p.linkedinData?.currentPosition || 'Unknown'}
-   - Company: ${p.linkedinData?.company || 'Unknown'}
-   - Education: ${p.linkedinData?.education?.map(e => `${e.degree} at ${e.school}`).join(', ') || 'Unknown'}
-   - Experience: ${p.linkedinData?.experience?.length || 0} positions
-   - Skills: ${p.linkedinData?.skills?.slice(0, 10).join(', ') || 'None'}
-`).join('\n')}
+${participantList}
 
-Return a JSON object with a "rankings" array of ALL participant names ranked from most prestigious/influential to least, with a brief reasoning for each. Even if you don't have much info, still rank them. Format:
-{
-  "rankings": [
-    {"name": "Name", "reasoning": "Why they're influential", "score": 0.95}
-  ]
-}`;
+Return JSON with ONLY the top ${topN} ranked by career prestige:
+{"top": [{"name": "Full Name", "score": 0.95, "reason": "why they're influential"}]}
+
+Score from 0.7 to 1.0. Consider: company prestige (FAANG, top startups), role seniority, career achievements.`;
 
     try {
       const openai = getOpenAIClient();
-      console.log(`[LLM] Analyzing ${participants.length} participants...`);
+      console.log(`[LLM] Finding top ${topN} from ${participants.length} participants...`);
       
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
+        max_tokens: 500,
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      const rankings = result.rankings || [];
+      const content = response.choices[0].message.content || '{}';
+      console.log('[LLM] Response:', content.substring(0, 300));
       
-      console.log(`[LLM] Received ${rankings.length} rankings from OpenAI`);
+      const result = JSON.parse(content);
+      const rankings = result.top || result.rankings || [];
+      
+      console.log(`[LLM] Got ${rankings.length} top candidates`);
 
       // Map rankings back to participants
-      const rankedParticipants = rankings
-        .map((r: any) => {
-          const participant = participants.find(p => 
-            p.name.toLowerCase() === r.name?.toLowerCase() ||
-            p.name.toLowerCase().includes(r.name?.toLowerCase()) ||
-            r.name?.toLowerCase().includes(p.name.toLowerCase())
-          );
+      const topParticipants = rankings
+        .slice(0, topN)
+        .map((r: { name: string; score: number; reason?: string }) => {
+          if (!r.name) return null;
+          const participant = participants.find(p => {
+            const pName = p.name.toLowerCase().trim();
+            const rName = r.name.toLowerCase().trim();
+            return pName === rName || 
+                   pName.includes(rName) || 
+                   rName.includes(pName) ||
+                   pName.split(' ')[0] === rName.split(' ')[0];
+          });
           if (participant) {
-            return { ...participant, score: r.score || 0.5 };
+            return { ...participant, score: r.score || 0.8 };
           }
           return null;
         })
         .filter(Boolean) as Participant[];
       
-      console.log(`[LLM] Matched ${rankedParticipants.length} participants`);
-      return rankedParticipants;
+      console.log(`[LLM] Matched ${topParticipants.length} top participants`);
+      
+      return topParticipants.length > 0 ? topParticipants : this.fallbackRanking(participants, topN);
     } catch (error) {
-      console.error('[LLM] Error identifying heavy hitters:', error);
-      // Return participants with default scores as fallback
-      return participants.map((p, idx) => ({
-        ...p,
-        score: Math.max(0.5, 1 - (idx * 0.03)),
-      }));
+      console.error('[LLM] Error:', error);
+      return this.fallbackRanking(participants, topN);
     }
   }
 
+  private fallbackRanking(participants: Participant[], topN: number = 5): Participant[] {
+    return participants.slice(0, topN).map((p, idx) => ({
+      ...p,
+      score: Math.max(0.7, 1 - (idx * 0.05)),
+    }));
+  }
+
   async generateTalkingPoints(participant: Participant): Promise<string[]> {
-    if (!participant.linkedinData) {
-      return ['No LinkedIn data available for this participant.'];
+    const name = participant.name;
+    const firstName = name.split(' ')[0];
+    const company = participant.linkedinData?.company;
+    const position = participant.linkedinData?.currentPosition;
+    const headline = participant.linkedinData?.headline;
+    
+    // If no useful data, return generic openers
+    if (!company && !position && !headline) {
+      return [
+        `Hey ${firstName}! What brings you to this hackathon?`,
+        `What kind of projects are you hoping to work on?`,
+        `What's your tech background?`,
+      ];
     }
 
-    const prompt = `You're at a hackathon and want to network with this person. Generate 5 SHORT, punchy conversation openers that will actually work in a loud, busy hackathon environment.
+    const prompt = `Generate 3 casual conversation starters for meeting ${name} at a hackathon.
+Their info: ${position || ''} ${company ? `at ${company}` : ''} ${headline ? `- ${headline}` : ''}
 
-THEIR INFO:
-- Name: ${participant.name}
-- Role: ${participant.linkedinData.currentPosition || 'Unknown'}
-- Company: ${participant.linkedinData.company || 'Unknown'}
-- Bio: ${participant.linkedinData.about?.substring(0, 200) || participant.linkedinData.headline || 'None'}
-
-RULES:
-1. Each opener should be 1-2 sentences MAX
-2. Be casual and genuine, NOT corporate or cringe
-3. Reference something specific about them (company, role, or background)
-4. Include a question to get them talking
-5. Avoid generic compliments like "I love your work"
-
-EXAMPLES OF GOOD OPENERS:
-- "Hey! I saw you're at ${participant.linkedinData.company || 'a cool company'} - what's the tech stack like there?"
-- "Quick question - as someone in ${participant.linkedinData.currentPosition || 'your field'}, what's the biggest problem you'd want to solve this weekend?"
-
-Return as JSON: {"talkingPoints": ["opener 1", "opener 2", ...]}`;
+Rules: Be friendly, ask questions, reference their background.
+Return JSON: {"points": ["starter 1", "starter 2", "starter 3"]}`;
 
     try {
       const openai = getOpenAIClient();
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
+        max_tokens: 250,
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
-      console.log(`[LLM] Generated talking points for ${participant.name}`);
-      return result.talkingPoints || [];
+      const points = result.points || result.talkingPoints || [];
+      
+      if (points.length > 0) {
+        console.log(`[LLM] Generated talking points for ${name}`);
+        return points;
+      }
+      return this.fallbackTalkingPoints(firstName, company, position);
     } catch (error) {
-      console.error(`Error generating talking points for ${participant.name}:`, error);
-      return ['Error generating talking points.'];
+      console.error(`[LLM] Error for ${name}:`, error);
+      return this.fallbackTalkingPoints(firstName, company, position);
     }
+  }
+
+  private fallbackTalkingPoints(firstName: string, company?: string, position?: string): string[] {
+    return [
+      company ? `Hey! I saw you're at ${company} - what's it like there?` : `Hey ${firstName}! What brings you here?`,
+      position ? `As a ${position}, what are you hoping to build?` : `What projects interest you?`,
+      `What's your go-to tech stack?`,
+    ];
   }
 
   async findSimilarBackgrounds(
@@ -151,12 +170,20 @@ Return as JSON: {"talkingPoints": ["opener 1", "opener 2", ...]}`;
     score: number;
     details: SimilarityMatch['commonalities'];
   } {
-    const p1Bg = p1.background || { schools: [] as string[], companies: [] as string[], skills: [] as string[] };
-    const p2Bg = p2.background || { schools: [] as string[], companies: [] as string[], skills: [] as string[] };
+    const emptyBg = { schools: [] as string[], companies: [] as string[], skills: [] as string[] };
+    const p1Bg = p1.background || emptyBg;
+    const p2Bg = p2.background || emptyBg;
 
-    const commonSchools = p1Bg.schools.filter(s => p2Bg.schools.includes(s));
-    const commonCompanies = p1Bg.companies.filter(c => p2Bg.companies.includes(c));
-    const commonSkills = p1Bg.skills.filter(s => p2Bg.skills.includes(s));
+    const p1Schools = p1Bg.schools || [];
+    const p2Schools = p2Bg.schools || [];
+    const p1Companies = p1Bg.companies || [];
+    const p2Companies = p2Bg.companies || [];
+    const p1Skills = p1Bg.skills || [];
+    const p2Skills = p2Bg.skills || [];
+
+    const commonSchools = p1Schools.filter(s => p2Schools.includes(s));
+    const commonCompanies = p1Companies.filter(c => p2Companies.includes(c));
+    const commonSkills = p1Skills.filter(s => p2Skills.includes(s));
 
     let score = 0;
     if (commonSchools.length > 0) score += 0.4;
@@ -166,77 +193,54 @@ Return as JSON: {"talkingPoints": ["opener 1", "opener 2", ...]}`;
 
     return {
       score: Math.min(score, 1.0),
-      details: {
-        schools: commonSchools,
-        companies: commonCompanies,
-        skills: commonSkills,
-      },
+      details: { schools: commonSchools, companies: commonCompanies, skills: commonSkills },
     };
   }
 
-  async suggestTeams(
-    participants: Participant[],
-    teamSize: number = 4
-  ): Promise<TeamSuggestion[]> {
+  async suggestTeams(participants: Participant[], teamSize: number = 4): Promise<TeamSuggestion[]> {
     if (participants.length < 2) {
-      console.log('[LLM] Not enough participants for team suggestions');
       return [];
     }
 
-    const prompt = `Analyze these hackathon participants and suggest ${teamSize}-person teams with complementary skills:
+    const participantList = participants.map((p, idx) => 
+      `${idx + 1}. ${p.name} - Skills: ${p.linkedinData?.skills?.slice(0, 5).join(', ') || 'Unknown'}`
+    ).join('\n');
+
+    const prompt = `Suggest 3 hackathon teams of ${teamSize} people with complementary skills.
 
 Participants:
-${participants.map((p, idx) => `
-${idx + 1}. ${p.name}
-   - Skills: ${p.linkedinData?.skills?.join(', ') || 'Unknown'}
-   - Experience: ${p.linkedinData?.experience?.map(e => e.title).join(', ') || 'None'}
-   - Education: ${p.linkedinData?.education?.map(e => e.field || e.degree).join(', ') || 'None'}
-`).join('\n')}
+${participantList}
 
-Suggest 3-5 teams with:
-- Complementary technical skills
-- Diverse backgrounds
-- Good collaboration potential
-
-Return JSON format:
-{
-  "teams": [
-    {
-      "participants": ["Name1", "Name2", ...],
-      "reasoning": "Why this team works well",
-      "complementarySkills": ["skill1", "skill2", ...]
-    }
-  ]
-}`;
+Return JSON: {"teams": [{"members": ["Name1", "Name2"], "reason": "why they work well", "skills": ["skill1"]}]}`;
 
     try {
       const openai = getOpenAIClient();
-      console.log(`[LLM] Suggesting teams for ${participants.length} participants...`);
+      console.log(`[LLM] Suggesting teams...`);
       
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
+        max_tokens: 800,
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
       const teams = result.teams || [];
       
-      console.log(`[LLM] Received ${teams.length} team suggestions`);
+      console.log(`[LLM] Got ${teams.length} team suggestions`);
 
-      return teams.map((team: any) => ({
-        participants: (team.participants || [])
+      return teams.map((team: { members?: string[]; participants?: string[]; reason?: string; reasoning?: string; skills?: string[]; complementarySkills?: string[] }) => ({
+        participants: (team.members || team.participants || [])
           .map((name: string) => participants.find(p => 
-            p.name.toLowerCase() === name?.toLowerCase() ||
             p.name.toLowerCase().includes(name?.toLowerCase()) ||
             name?.toLowerCase().includes(p.name.toLowerCase())
           ))
           .filter(Boolean) as Participant[],
-        reasoning: team.reasoning || 'Complementary skills and backgrounds',
-        complementarySkills: team.complementarySkills || [],
-      })).filter((team: TeamSuggestion) => team.participants.length >= 2);
+        reasoning: team.reason || team.reasoning || 'Complementary skills',
+        complementarySkills: team.skills || team.complementarySkills || [],
+      })).filter((t: TeamSuggestion) => t.participants.length >= 2);
     } catch (error) {
-      console.error('[LLM] Error suggesting teams:', error);
+      console.error('[LLM] Team suggestion error:', error);
       return [];
     }
   }
@@ -246,32 +250,29 @@ Return JSON format:
     heavyHitters: Participant[],
     userExperience?: string
   ): Promise<string> {
-    const prompt = `Generate a professional LinkedIn post about attending ${hackathonName}.
+    const notableRoles = heavyHitters.slice(0, 3)
+      .map(p => `${p.linkedinData?.currentPosition} at ${p.linkedinData?.company}`)
+      .filter(r => !r.includes('undefined'))
+      .join(', ');
 
-Notable participants (mention subtly, not by name unless very appropriate):
-${heavyHitters.slice(0, 5).map(p => `- ${p.linkedinData?.currentPosition} at ${p.linkedinData?.company}`).join('\n')}
+    const prompt = `Write a LinkedIn post about attending ${hackathonName || 'a hackathon'}.
+${notableRoles ? `Notable attendees included: ${notableRoles}` : ''}
+${userExperience ? `My experience: ${userExperience}` : ''}
 
-${userExperience ? `User's experience: ${userExperience}` : ''}
-
-Make it:
-- Professional and engaging
-- Highlight networking opportunities
-- Mention the quality of participants
-- Include relevant hashtags
-- 2-3 paragraphs, LinkedIn-appropriate length`;
+Make it professional, 2-3 paragraphs, include hashtags.`;
 
     try {
       const openai = getOpenAIClient();
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
+        max_tokens: 400,
       });
 
-      return response.choices[0].message.content || '';
+      return response.choices[0].message.content || 'Could not generate post.';
     } catch (error) {
-      console.error('Error generating LinkedIn post:', error);
-      return 'Error generating post.';
+      console.error('[LLM] Post generation error:', error);
+      return 'Error generating post. Please try again.';
     }
   }
 }
-
