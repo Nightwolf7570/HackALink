@@ -1,7 +1,6 @@
 import "server-only";
 
 import { StackServerApp } from "@stackframe/stack";
-import { stackClientApp } from "./client";
 
 export const stackServerApp = new StackServerApp({
   tokenStore: "nextjs-cookie",
@@ -11,5 +10,9 @@ export const stackServerApp = new StackServerApp({
   urls: {
     signIn: '/login',
     signUp: '/signup',
+    handler: '/handler',
+    afterSignIn: '/',
+    afterSignUp: '/',
+    home: '/',
   },
 });

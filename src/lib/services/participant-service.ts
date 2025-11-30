@@ -1,4 +1,5 @@
 import { LinkedInScraperLegal } from '../linkedin-scraper-legal';
+import { SocialMediaScraper } from '../social-media-scraper';
 import { LLMAnalyzer } from '../llm-client';
 import type {
   Participant,
@@ -10,9 +11,11 @@ import type {
 
 export class ParticipantService {
   private llmAnalyzer: LLMAnalyzer;
+  private socialMediaScraper: SocialMediaScraper;
 
   constructor() {
     this.llmAnalyzer = new LLMAnalyzer();
+    this.socialMediaScraper = new SocialMediaScraper();
   }
 
   async processParticipants(
@@ -142,14 +145,33 @@ export class ParticipantService {
       }));
     }
 
+    // Fetch social media profiles for heavy hitters
     onProgress?.({
-      stage: 'Generating talking points',
-      progress: 0.8,
-      message: `Creating conversation starters for top ${heavyHitters.length} candidates...`,
+      stage: 'Fetching social media',
+      progress: 0.75,
+      message: `Finding social media profiles for top ${heavyHitters.length} candidates...`,
     });
 
-    // Generate talking points ONLY for the top 5 heavy hitters
-    const talkingPoints = await this.generateAllTalkingPoints(heavyHitters);
+    // Enrich heavy hitters with social media data
+    const heavyHittersWithSocial = await this.enrichWithSocialMedia(heavyHitters, (completed, total) => {
+      onProgress?.({
+        stage: 'Fetching social media',
+        progress: 0.75 + (completed / total) * 0.1,
+        message: `Found social profiles for ${completed}/${total} top candidates...`,
+      });
+    });
+
+    onProgress?.({
+      stage: 'Generating talking points',
+      progress: 0.85,
+      message: `Creating conversation starters for top ${heavyHittersWithSocial.length} candidates...`,
+    });
+
+    // Generate talking points ONLY for the top 5 heavy hitters (now with social media data)
+    const talkingPoints = await this.generateAllTalkingPoints(heavyHittersWithSocial);
+    
+    // Update heavyHitters reference with enriched data
+    heavyHitters = heavyHittersWithSocial;
 
     onProgress?.({
       stage: 'Finding connections',
@@ -182,6 +204,43 @@ export class ParticipantService {
       similarBackgrounds,
       teamSuggestions,
     };
+  }
+
+  private async enrichWithSocialMedia(
+    participants: Participant[],
+    onProgress?: (completed: number, total: number) => void
+  ): Promise<Participant[]> {
+    const enriched: Participant[] = [];
+    let completed = 0;
+
+    for (const participant of participants) {
+      try {
+        const socialProfiles = await this.socialMediaScraper.findSocialProfiles(
+          participant.name,
+          participant.linkedinData?.company
+        );
+
+        if (socialProfiles.twitter || socialProfiles.github) {
+          console.log(`[ParticipantService] Found social media for ${participant.name}:`, 
+            socialProfiles.twitter ? `Twitter: ${socialProfiles.twitter.handle}` : '',
+            socialProfiles.github ? `GitHub: ${socialProfiles.github}` : ''
+          );
+        }
+
+        enriched.push({
+          ...participant,
+          socialMedia: socialProfiles,
+        });
+      } catch (error) {
+        console.warn(`[ParticipantService] Error fetching social media for ${participant.name}:`, error);
+        enriched.push(participant);
+      }
+
+      completed++;
+      onProgress?.(completed, participants.length);
+    }
+
+    return enriched;
   }
 
   private async generateAllTalkingPoints(

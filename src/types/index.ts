@@ -57,9 +57,16 @@ export interface Background {
 }
 
 export interface SocialMediaProfiles {
-  twitter?: string;
+  twitter?: TwitterProfile;
   github?: string;
   website?: string;
+}
+
+export interface TwitterProfile {
+  handle: string;
+  bio?: string;
+  recentTweets?: string[];
+  followers?: number;
 }
 
 export interface TalkingPoint {

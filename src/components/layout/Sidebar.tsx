@@ -100,15 +100,15 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-3 border-t border-gray-800">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-800/50">
-          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-sm font-medium">
-            U
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">User</p>
-            <p className="text-xs text-gray-500">Free Plan</p>
-          </div>
-        </div>
+        <Link
+          href="/login"
+          className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+          </svg>
+          Login
+        </Link>
       </div>
     </aside>
   );

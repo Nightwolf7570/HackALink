@@ -94,9 +94,11 @@ Score from 0.7 to 1.0. Consider: company prestige (FAANG, top startups), role se
     const company = participant.linkedinData?.company;
     const position = participant.linkedinData?.currentPosition;
     const headline = participant.linkedinData?.headline;
+    const twitter = participant.socialMedia?.twitter;
+    const github = participant.socialMedia?.github;
     
     // If no useful data, return generic openers
-    if (!company && !position && !headline) {
+    if (!company && !position && !headline && !twitter && !github) {
       return [
         `Hey ${firstName}! What brings you to this hackathon?`,
         `What kind of projects are you hoping to work on?`,
@@ -104,10 +106,38 @@ Score from 0.7 to 1.0. Consider: company prestige (FAANG, top startups), role se
       ];
     }
 
-    const prompt = `Generate 3 casual conversation starters for meeting ${name} at a hackathon.
-Their info: ${position || ''} ${company ? `at ${company}` : ''} ${headline ? `- ${headline}` : ''}
+    // Build context from all available sources
+    let contextParts: string[] = [];
+    
+    if (position || company) {
+      contextParts.push(`Role: ${position || 'Unknown'} ${company ? `at ${company}` : ''}`);
+    }
+    if (headline) {
+      contextParts.push(`Headline: ${headline}`);
+    }
+    if (twitter) {
+      contextParts.push(`Twitter: ${twitter.handle}`);
+      if (twitter.bio) {
+        contextParts.push(`Twitter bio: ${twitter.bio}`);
+      }
+      if (twitter.recentTweets && twitter.recentTweets.length > 0) {
+        contextParts.push(`Recent tweets: ${twitter.recentTweets.slice(0, 3).join(' | ')}`);
+      }
+    }
+    if (github) {
+      contextParts.push(`GitHub: ${github}`);
+    }
 
-Rules: Be friendly, ask questions, reference their background.
+    const prompt = `Generate 3 casual conversation starters for meeting ${name} at a hackathon.
+
+Their info:
+${contextParts.join('\n')}
+
+Rules: 
+- Be friendly and ask questions
+- Reference their background, recent tweets, or projects if available
+- If they have Twitter activity, use it to make the conversation more personal
+- Keep it natural and not creepy
 Return JSON: {"points": ["starter 1", "starter 2", "starter 3"]}`;
 
     try {
